@@ -30,6 +30,12 @@ namespace GitHub.Runner.Worker
         private IDockerCommandManager _dockerManager;
         private IContainerHookManager _containerHookManager;
 
+        internal static bool ContainerOperationsSupported()
+        {
+            return Constants.Runner.Platform.Equals(Constants.OSPlatform.Linux)
+                || Constants.Runner.Platform.Equals(Constants.OSPlatform.Windows);
+        }
+
         public override void Initialize(IHostContext hostContext)
         {
             base.Initialize(hostContext);
@@ -46,9 +52,9 @@ namespace GitHub.Runner.Worker
         public async Task StartContainersAsync(IExecutionContext executionContext, object data)
         {
             Trace.Entering();
-            if (!Constants.Runner.Platform.Equals(Constants.OSPlatform.Linux))
+            if (!ContainerOperationsSupported())
             {
-                throw new NotSupportedException("Container operations are only supported on Linux runners");
+                throw new NotSupportedException("Container operations are only supported on Linux and Windows runners");
             }
             ArgUtil.NotNull(executionContext, nameof(executionContext));
             List<ContainerInfo> containers = data as List<ContainerInfo>;
@@ -309,20 +315,35 @@ namespace GitHub.Runner.Worker
 
             var tempHomeDirectory = Path.Combine(HostContext.GetDirectory(WellKnownDirectory.Temp), "_github_home");
             Directory.CreateDirectory(tempHomeDirectory);
+#if OS_WINDOWS
+            container.MountVolumes.Add(new MountVolume(tempHomeDirectory, "C:\\github\\home"));
+            container.AddPathTranslateMapping(tempHomeDirectory, "C:\\github\\home");
+#else
             container.MountVolumes.Add(new MountVolume(tempHomeDirectory, "/github/home"));
             container.AddPathTranslateMapping(tempHomeDirectory, "/github/home");
+#endif
             container.ContainerEnvironmentVariables["HOME"] = container.TranslateToContainerPath(tempHomeDirectory);
 
             var tempWorkflowDirectory = Path.Combine(HostContext.GetDirectory(WellKnownDirectory.Temp), "_github_workflow");
             Directory.CreateDirectory(tempWorkflowDirectory);
+#if OS_WINDOWS
+            container.MountVolumes.Add(new MountVolume(tempWorkflowDirectory, "C:\\github\\workflow"));
+            container.AddPathTranslateMapping(tempWorkflowDirectory, "C:\\github\\workflow");
+#else
             container.MountVolumes.Add(new MountVolume(tempWorkflowDirectory, "/github/workflow"));
             container.AddPathTranslateMapping(tempWorkflowDirectory, "/github/workflow");
+#endif
 
             container.ContainerWorkDirectory = container.TranslateToContainerPath(workingDirectory);
             if (!FeatureManager.IsContainerHooksEnabled(executionContext.Global.Variables))
             {
+#if OS_WINDOWS
+                container.ContainerEntryPoint = "cmd";
+                container.ContainerEntryPointArgs = "/c \"waitfor /t 86400 ContainerStop 2>NUL || exit 0\"";
+#else
                 container.ContainerEntryPoint = "tail";
                 container.ContainerEntryPointArgs = "\"-f\" \"/dev/null\"";
+#endif
             }
         }
 
