@@ -333,6 +333,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
             RUNNER_VERSION=${{ steps.image.outputs.version }}
+            RUNNER_GITHUB_REPO=${{ github.repository }}
           push: true
           labels: |
             org.opencontainers.image.source=${{github.server_url}}/${{github.repository}}
