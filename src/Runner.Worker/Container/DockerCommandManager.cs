@@ -336,9 +336,9 @@ namespace GitHub.Runner.Worker.Container
                 }
             };
 
-            if (!Constants.Runner.Platform.Equals(Constants.OSPlatform.Linux))
+            if (!ContainerOperationProvider.ContainerOperationsSupported())
             {
-                throw new NotSupportedException("Container operations are only supported on Linux runners");
+                throw new NotSupportedException("Container operations are only supported on Linux and Windows runners");
             }
             return await processInvoker.ExecuteAsync(
                             workingDirectory: HostContext.GetDirectory(WellKnownDirectory.Work),
@@ -398,9 +398,9 @@ namespace GitHub.Runner.Worker.Container
             processInvoker.ErrorDataReceived += stderrDataReceived;
 
 
-            if (!Constants.Runner.Platform.Equals(Constants.OSPlatform.Linux))
+            if (!ContainerOperationProvider.ContainerOperationsSupported())
             {
-                throw new NotSupportedException("Container operations are only supported on Linux runners");
+                throw new NotSupportedException("Container operations are only supported on Linux and Windows runners");
             }
             return await processInvoker.ExecuteAsync(
                 workingDirectory: context.GetGitHubContext("workspace"),
@@ -429,9 +429,9 @@ namespace GitHub.Runner.Worker.Container
                 context.Output(message.Data);
             };
 
-            if (!Constants.Runner.Platform.Equals(Constants.OSPlatform.Linux))
+            if (!ContainerOperationProvider.ContainerOperationsSupported())
             {
-                throw new NotSupportedException("Container operations are only supported on Linux runners");
+                throw new NotSupportedException("Container operations are only supported on Linux and Windows runners");
             }
             return await processInvoker.ExecuteAsync(
                 workingDirectory: workingDirectory ?? context.GetGitHubContext("workspace"),
