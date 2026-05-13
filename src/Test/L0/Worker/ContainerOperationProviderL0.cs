@@ -8,12 +8,31 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using GitHub.DistributedTask.WebApi;
 using System;
+using System.Runtime.InteropServices;
 
 namespace GitHub.Runner.Common.Tests.Worker
 {
 
     public sealed class ContainerOperationProviderL0
     {
+
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public void ContainerOperationsSupported_ReturnsExpectedForCurrentPlatform()
+        {
+            var result = ContainerOperationProvider.ContainerOperationsSupported();
+
+            if (Constants.Runner.Platform.Equals(Constants.OSPlatform.Linux) ||
+                Constants.Runner.Platform.Equals(Constants.OSPlatform.Windows))
+            {
+                Assert.True(result, "Container operations should be supported on Linux and Windows");
+            }
+            else
+            {
+                Assert.False(result, "Container operations should not be supported on macOS");
+            }
+        }
 
         private TestHostContext _hc;
         private Mock<IExecutionContext> _ec;
@@ -161,5 +180,19 @@ namespace GitHub.Runner.Common.Tests.Worker
 
             containerOperationProvider.Initialize(_hc);
         }
+
+#if OS_OSX
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public async void StartContainersAsync_ThrowsOnUnsupportedPlatform()
+        {
+            //Arrange
+            Setup();
+
+            //Act & Assert
+            await Assert.ThrowsAsync<NotSupportedException>(() => containerOperationProvider.StartContainersAsync(_ec.Object, containers));
+        }
+#endif
     }
 }

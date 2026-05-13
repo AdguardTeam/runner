@@ -32,9 +32,13 @@ namespace GitHub.Runner.Worker.Handlers
             ArgUtil.NotNull(Data, nameof(Data));
             ArgUtil.NotNull(ExecutionContext, nameof(ExecutionContext));
 
-#if OS_WINDOWS || OS_OSX
-            throw new NotSupportedException($"Container action is only supported on Linux");
+#if OS_OSX
+            throw new NotSupportedException($"Container action is only supported on Linux and Windows");
 #else
+            if (!ContainerOperationProvider.ContainerOperationsSupported())
+            {
+                throw new NotSupportedException("Container action is only supported on Linux and Windows");
+            }
             // Update the env dictionary.
             AddInputsToEnvironment();
 
@@ -190,6 +194,22 @@ namespace GitHub.Runner.Worker.Handlers
             var tempWorkflowDirectory = Path.Combine(tempDirectory, "_github_workflow");
             ArgUtil.Directory(tempWorkflowDirectory, nameof(tempWorkflowDirectory));
 
+#if OS_WINDOWS
+            container.MountVolumes.Add(new MountVolume(@"\\.\pipe\docker_engine", @"\\.\pipe\docker_engine"));
+            container.MountVolumes.Add(new MountVolume(tempDirectory, "C:\\github\\runner_temp"));
+            container.MountVolumes.Add(new MountVolume(tempHomeDirectory, "C:\\github\\home"));
+            container.MountVolumes.Add(new MountVolume(tempWorkflowDirectory, "C:\\github\\workflow"));
+            container.MountVolumes.Add(new MountVolume(tempFileCommandDirectory, "C:\\github\\file_commands"));
+            container.MountVolumes.Add(new MountVolume(defaultWorkingDirectory, "C:\\github\\workspace"));
+
+            container.AddPathTranslateMapping(tempDirectory, "C:\\github\\runner_temp");
+            container.AddPathTranslateMapping(tempHomeDirectory, "C:\\github\\home");
+            container.AddPathTranslateMapping(tempWorkflowDirectory, "C:\\github\\workflow");
+            container.AddPathTranslateMapping(tempFileCommandDirectory, "C:\\github\\file_commands");
+            container.AddPathTranslateMapping(defaultWorkingDirectory, "C:\\github\\workspace");
+
+            container.ContainerWorkDirectory = "C:\\github\\workspace";
+#else
             container.MountVolumes.Add(new MountVolume("/var/run/docker.sock", "/var/run/docker.sock"));
             container.MountVolumes.Add(new MountVolume(tempDirectory, "/github/runner_temp"));
             container.MountVolumes.Add(new MountVolume(tempHomeDirectory, "/github/home"));
@@ -204,6 +224,7 @@ namespace GitHub.Runner.Worker.Handlers
             container.AddPathTranslateMapping(defaultWorkingDirectory, "/github/workspace");
 
             container.ContainerWorkDirectory = "/github/workspace";
+#endif
 
             // expose context to environment
             foreach (var context in ExecutionContext.ExpressionValues)
