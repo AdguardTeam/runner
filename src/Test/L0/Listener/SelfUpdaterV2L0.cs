@@ -22,7 +22,7 @@ namespace GitHub.Runner.Common.Tests.Listener
         private Mock<ITerminal> _term;
         private Mock<IConfigurationStore> _configStore;
         private Mock<IJobDispatcher> _jobDispatcher;
-        private AgentRefreshMessage _refreshMessage = new(1, "2.999.0");
+        private AgentRefreshMessage _refreshMessage = new(1, "2.99999.0");
 
 #if !OS_WINDOWS
         private string _packageUrl = null;
@@ -107,7 +107,7 @@ namespace GitHub.Runner.Common.Tests.Listener
                     {
                         var message = new RunnerRefreshMessage()
                         {
-                            TargetVersion = "2.999.0",
+                            TargetVersion = "2.99999.0",
                             OS = BuildConstants.RunnerPackage.PackageName,
                             DownloadUrl = _packageUrl
 
@@ -115,13 +115,13 @@ namespace GitHub.Runner.Common.Tests.Listener
 
                         var result = await updater.SelfUpdate(message, _jobDispatcher.Object, true, hc.RunnerShutdownToken);
                         Assert.True(result);
-                        Assert.True(Directory.Exists(Path.Combine(hc.GetDirectory(WellKnownDirectory.Root), "bin.2.999.0")));
-                        Assert.True(Directory.Exists(Path.Combine(hc.GetDirectory(WellKnownDirectory.Root), "externals.2.999.0")));
+                        Assert.True(Directory.Exists(Path.Combine(hc.GetDirectory(WellKnownDirectory.Root), "bin.2.99999.0")));
+                        Assert.True(Directory.Exists(Path.Combine(hc.GetDirectory(WellKnownDirectory.Root), "externals.2.99999.0")));
                     }
                     finally
                     {
-                        IOUtil.DeleteDirectory(Path.Combine(hc.GetDirectory(WellKnownDirectory.Root), "bin.2.999.0"), CancellationToken.None);
-                        IOUtil.DeleteDirectory(Path.Combine(hc.GetDirectory(WellKnownDirectory.Root), "externals.2.999.0"), CancellationToken.None);
+                        IOUtil.DeleteDirectory(Path.Combine(hc.GetDirectory(WellKnownDirectory.Root), "bin.2.99999.0"), CancellationToken.None);
+                        IOUtil.DeleteDirectory(Path.Combine(hc.GetDirectory(WellKnownDirectory.Root), "externals.2.99999.0"), CancellationToken.None);
                     }
                 }
             }
@@ -165,7 +165,7 @@ namespace GitHub.Runner.Common.Tests.Listener
 
                     var message = new RunnerRefreshMessage()
                     {
-                        TargetVersion = "2.999.0",
+                        TargetVersion = "2.99999.0",
                         OS = BuildConstants.RunnerPackage.PackageName,
                         DownloadUrl = "https://github.com/actions/runner/notexists"
                     };
@@ -214,7 +214,7 @@ namespace GitHub.Runner.Common.Tests.Listener
 
                     var message = new RunnerRefreshMessage()
                     {
-                        TargetVersion = "2.999.0",
+                        TargetVersion = "2.99999.0",
                         OS = BuildConstants.RunnerPackage.PackageName,
                         DownloadUrl = _packageUrl,
                         SHA256Checksum = "badhash"
