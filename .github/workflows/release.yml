@@ -293,10 +293,12 @@ jobs:
       attestations: write
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository_owner }}/actions-runner
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Set image name
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY_OWNER,,}/actions-runner" >> "$GITHUB_ENV"
 
       - name: Compute image version
         id: image
