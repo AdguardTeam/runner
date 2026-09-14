@@ -1,6 +1,8 @@
+chore: drop upstream workflows the fork does not use
 feat: automate upstream sync with fork-patch verification
 fix: enable container operations on Windows runners
 fix: lowercase Docker image name for GHCR compatibility
+fix: pin .github/workflows to the fork set during upstream sync
 fix: quote script path in bash/sh handlers to support spaces (#4404)
 fix: revert build.yml Docker test to use upstream release
 fix: use fork's own releases for Docker image builds
