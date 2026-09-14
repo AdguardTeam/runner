@@ -9,10 +9,12 @@
 #   3. exit if a sync PR for it is already open
 #   4. branch sync/upstream-<ver> off main and `git merge` the release
 #      tag — fork patches are carried by git itself, they are never
-#      replayed by hand
-#   5. bump the fork version (upstream 2.337.0 -> fork 2.10337.0)
-#   6. verify the fork patch set (scripts/verify-fork-patches.sh)
-#   7. push the branch and open a PR (merge stays manual)
+#      replayed by hand. The fork's .github/workflows is pinned to our
+#      version during the merge (the GITHUB_TOKEN cannot push workflow
+#      files, and the fork maintains its own workflow set), and the
+#      version files are reset to the fork version.
+#   5. verify the fork patch set (scripts/verify-fork-patches.sh)
+#   6. push the branch and open a PR (merge stays manual)
 #
 # On merge conflicts the script aborts the merge and opens a tracking
 # issue instead of guessing a resolution.
@@ -85,27 +87,39 @@ fi
 
 git checkout -B "$BRANCH" origin/main
 
-if ! git merge --no-edit "${TAG}"; then
-    conflicts="$(git diff --name-only --diff-filter=U)"
-    # releaseVersion/src/runnerversion conflict on every sync by
-    # construction: upstream's release commit sets the upstream version
-    # in the same line where we carry our fork version. Resolve exactly
-    # those two files mechanically; anything else goes to a human.
-    other_conflicts="$(echo "$conflicts" | grep -vE '^(releaseVersion|src/runnerversion|^$)' || true)"
-    if [ -z "${other_conflicts//[$' \t\n']/}" ]; then
-        printf '%s\n' "$FORK_VER" > releaseVersion
-        printf '%s\n' "$FORK_VER" > src/runnerversion
-        git add releaseVersion src/runnerversion
-        git commit --no-edit --quiet
-        log "resolved expected version-file conflicts -> $FORK_VER"
-    else
-        git merge --abort || true
-        log "merge of $UPSTREAM_VER conflicts; a human must resolve:"
-        echo "$other_conflicts"
-        if [ "$DRY_RUN" != "1" ]; then
-            gh issue create \
-                --title "fork-sync: $UPSTREAM_VER has merge conflicts" \
-                --body "Merging upstream \`$TAG\` into \`main\` conflicts in:
+# Merge without committing: the expected conflicts are resolved
+# mechanically below before the merge is concluded.
+git merge --no-commit --no-edit "${TAG}" || true
+
+# The fork owns .github/workflows. Mirror our version over whatever
+# upstream did to them:
+#   1. the GITHUB_TOKEN used to push the branch is not allowed to
+#      create or update workflow files at all, so the sync branch must
+#      not carry any workflow-file deltas relative to main;
+#   2. the fork deliberately maintains its own workflow set (unused
+#      upstream workflows are dropped), so upstream changes and
+#      re-additions must not resurrect them.
+git rm -r -q -f -- .github/workflows >/dev/null 2>&1 || true
+rm -rf .github/workflows
+git checkout origin/main -- .github/workflows
+
+# releaseVersion/src/runnerversion conflict on every sync by
+# construction: upstream's release commit sets the upstream version
+# in the same line where we carry our fork version.
+printf '%s\n' "$FORK_VER" > releaseVersion
+printf '%s\n' "$FORK_VER" > src/runnerversion
+git add releaseVersion src/runnerversion
+
+# Anything still unresolved needs a human.
+other_conflicts="$(git diff --name-only --diff-filter=U)"
+if [ -n "$other_conflicts" ]; then
+    git merge --abort || true
+    log "merge of $UPSTREAM_VER conflicts; a human must resolve:"
+    echo "$other_conflicts"
+    if [ "$DRY_RUN" != "1" ]; then
+        gh issue create \
+            --title "fork-sync: $UPSTREAM_VER has merge conflicts" \
+            --body "Merging upstream \`$TAG\` into \`main\` conflicts in:
 \`\`\`
 $other_conflicts
 \`\`\`
@@ -116,22 +130,13 @@ git checkout -B $BRANCH main
 git merge $TAG
 # resolve, test, then update scripts/fork-patches.txt if patches were absorbed upstream
 \`\`\`"
-        fi
-        exit 1
     fi
+    exit 1
 fi
 
-# --- 5. fork version bump ----------------------------------------------------
-
-printf '%s\n' "$FORK_VER" > releaseVersion
-printf '%s\n' "$FORK_VER" > src/runnerversion
-
-if git diff --quiet -- releaseVersion src/runnerversion; then
-    log "fork version already at $FORK_VER; skipping bump commit"
-else
-    git add releaseVersion src/runnerversion
-    git commit -m "chore: bump version to $FORK_VER (sync with upstream $UPSTREAM_VER)"
-fi
+# Conclude the merge (the version files and workflow pin are part of
+# the merge commit).
+git commit --no-edit --quiet
 
 # --- 6. fork patch gate ------------------------------------------------------
 

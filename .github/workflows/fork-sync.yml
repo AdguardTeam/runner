@@ -12,11 +12,14 @@ concurrency:
   group: fork-sync
   cancel-in-progress: false
 
+# NOTE on permissions: there is deliberately no permission that allows
+# the GITHUB_TOKEN to push workflow-file changes. Because of that the
+# sync script pins .github/workflows to the fork's version while
+# merging, so the pushed branch never carries workflow deltas.
 permissions:
   contents: write
   pull-requests: write
   issues: write
-  actions: write   # upstream releases touch .github/workflows/*; pushing those needs this
 
 jobs:
   sync:
