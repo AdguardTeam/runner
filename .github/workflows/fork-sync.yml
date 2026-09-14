@@ -6,7 +6,7 @@ name: Fork sync
 on:
   schedule:
     - cron: "0 5 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 concurrency:
   group: fork-sync
@@ -16,7 +16,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  actions: : write   # upstream releases touch .github/workflows/*; pushing those needs this
+  actions: write   # upstream releases touch .github/workflows/*; pushing those needs this
 
 jobs:
   sync:
