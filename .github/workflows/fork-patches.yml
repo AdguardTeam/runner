@@ -1,0 +1,28 @@
+name: Fork patches
+
+# Guards the fork's patch set. Runs on every push to main and every PR
+# so that an upstream sync that drops a fork patch can never be merged.
+#
+# Recommended: mark the "Fork patches / verify" check as required in
+# repository branch protection settings.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify fork patch set
+        run: scripts/verify-fork-patches.sh HEAD
