@@ -16,7 +16,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  workflows: write   # upstream releases touch .github/workflows/*; pushing those needs this
+  actions: : write   # upstream releases touch .github/workflows/*; pushing those needs this
 
 jobs:
   sync:
