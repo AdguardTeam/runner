@@ -1,6 +1,9 @@
+Fix permissions key in fork-sync.yml
+Fix syntax in fork-sync.yml workflow file
 chore: drop upstream workflows the fork does not use
 feat: automate upstream sync with fork-patch verification
 fix: enable container operations on Windows runners
+fix: grant workflows permission to fork-sync job
 fix: lowercase Docker image name for GHCR compatibility
 fix: pin .github/workflows to the fork set during upstream sync
 fix: quote script path in bash/sh handlers to support spaces (#4404)

@@ -34,7 +34,19 @@ UPSTREAM_REPO_SLUG="${UPSTREAM_REPO_SLUG:-actions/runner}"
 UPSTREAM_REMOTE="${UPSTREAM_REMOTE:-https://github.com/${UPSTREAM_REPO_SLUG}.git}"
 BRANCH_PREFIX="sync/upstream-"
 DRY_RUN="${DRY_RUN:-0}"
-GH_REPO="${GH_REPO:-}"   # gh infers the repo from the origin remote otherwise
+
+# Pin every `gh` command to our fork. gh resolves the target repo for
+# PR/issue commands from the git remotes and PREFERS one named
+# "upstream" — which this script adds for fetching upstream tags. In
+# CI the workflow exports GH_REPO; locally derive it from the origin
+# remote (https and ssh forms).
+if [ -z "${GH_REPO:-}" ]; then
+    derived="$(git remote get-url origin \
+        | sed -E 's#(https?://|ssh://)?([^@/]+@)?([^:/]+)[:/]##; s#\.git$##')"
+    case "$derived" in
+        */*) export GH_REPO="$derived" ;;
+    esac
+fi
 
 log() { echo "[fork-sync] $*"; }
 
