@@ -1,0 +1,7 @@
+feat: automate upstream sync with fork-patch verification
+fix: enable container operations on Windows runners
+fix: lowercase Docker image name for GHCR compatibility
+fix: quote script path in bash/sh handlers to support spaces (#4404)
+fix: revert build.yml Docker test to use upstream release
+fix: use fork's own releases for Docker image builds
+test: bump fake update version to 2.99999.0 in self-updater tests
