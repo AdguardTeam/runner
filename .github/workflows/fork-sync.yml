@@ -33,4 +33,5 @@ jobs:
       - name: Sync with upstream release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}   # gh would otherwise target actions/runner via the "upstream" remote
         run: scripts/fork-sync.sh
