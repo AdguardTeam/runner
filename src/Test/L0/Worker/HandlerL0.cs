@@ -180,6 +180,72 @@ namespace GitHub.Runner.Common.Tests.Worker
             }
         }
 
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public async Task RunAsync_KeepsGitHubResultsService_WhenResultsUrlIsUnset()
+        {
+            using (TestHostContext hc = CreateTestContext())
+            using (new EnvironmentScope(ResultsServiceOverride.ResultsUrlVariable, null))
+            {
+                var environment = await RunNodeScriptActionHandlerAsync(hc, new Dictionary<string, VariableValue>(), "https://results-receiver.actions.githubusercontent.com/");
+
+                Assert.Equal("https://results-receiver.actions.githubusercontent.com/", environment["ACTIONS_RESULTS_URL"]);
+            }
+        }
+
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public async Task RunAsync_UsesRedirectedResultsService_WhenResultsUrlIsSet()
+        {
+            using (TestHostContext hc = CreateTestContext())
+            using (new EnvironmentScope(ResultsServiceOverride.ResultsUrlVariable, "https://enot.int.agrd.dev"))
+            {
+                var environment = await RunNodeScriptActionHandlerAsync(hc, new Dictionary<string, VariableValue>(), "https://results-receiver.actions.githubusercontent.com/");
+
+                Assert.Equal("https://enot.int.agrd.dev/", environment["ACTIONS_RESULTS_URL"]);
+                Assert.Equal("token", environment["ACTIONS_RUNTIME_TOKEN"]);
+            }
+        }
+
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public async Task RunAsync_KeepsCacheServiceV2OnTheBackend_WhenResultsUrlIsSet()
+        {
+            using (TestHostContext hc = CreateTestContext())
+            using (new EnvironmentScope(ResultsServiceOverride.ResultsUrlVariable, "https://enot.int.agrd.dev"))
+            {
+                var environment = await RunNodeScriptActionHandlerAsync(
+                    hc,
+                    new Dictionary<string, VariableValue> { { "actions_uses_cache_service_v2", "true" } },
+                    "https://results-receiver.actions.githubusercontent.com/");
+
+                Assert.Equal("https://enot.int.agrd.dev/", environment["ACTIONS_RESULTS_URL"]);
+                Assert.Equal(bool.TrueString, environment["ACTIONS_CACHE_SERVICE_V2"]);
+            }
+        }
+
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public async Task ContainerRunAsync_UsesRedirectedResultsService_WhenResultsUrlIsSet()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return;
+            }
+
+            using (TestHostContext hc = CreateTestContext())
+            using (new EnvironmentScope(ResultsServiceOverride.ResultsUrlVariable, "https://enot.int.agrd.dev"))
+            {
+                var container = await RunContainerActionHandlerAsync(hc, new Dictionary<string, VariableValue>(), "https://results-receiver.actions.githubusercontent.com/");
+
+                Assert.Equal("https://enot.int.agrd.dev/", container.ContainerEnvironmentVariables["ACTIONS_RESULTS_URL"]);
+            }
+        }
+
         [Theory]
         [Trait("Level", "L0")]
         [Trait("Category", "Worker")]
@@ -224,7 +290,25 @@ namespace GitHub.Runner.Common.Tests.Worker
             }
         }
 
-        private async Task<ContainerInfo> RunContainerActionHandlerAsync(TestHostContext hc, IDictionary<string, VariableValue> variables)
+        private sealed class EnvironmentScope : IDisposable
+        {
+            private readonly string _key;
+            private readonly string _previousValue;
+
+            public EnvironmentScope(string key, string value)
+            {
+                _key = key;
+                _previousValue = Environment.GetEnvironmentVariable(key);
+                Environment.SetEnvironmentVariable(key, value);
+            }
+
+            public void Dispose()
+            {
+                Environment.SetEnvironmentVariable(_key, _previousValue);
+            }
+        }
+
+        private async Task<ContainerInfo> RunContainerActionHandlerAsync(TestHostContext hc, IDictionary<string, VariableValue> variables, string resultsServiceUrl = null)
         {
             // Route through the container-hooks path so the handler skips docker build/run.
             variables[Constants.Runner.Features.AllowRunnerContainerHooks] = "true";
@@ -250,6 +334,10 @@ namespace GitHub.Runner.Common.Tests.Worker
                     }
                 }
             };
+            if (!string.IsNullOrEmpty(resultsServiceUrl))
+            {
+                endpoints[0].Data["ResultsServiceUrl"] = resultsServiceUrl;
+            }
 
             _ec.Setup(x => x.Global).Returns(new GlobalContext()
             {
@@ -283,7 +371,7 @@ namespace GitHub.Runner.Common.Tests.Worker
             return captured;
         }
 
-        private async Task<Dictionary<string, string>> RunNodeScriptActionHandlerAsync(TestHostContext hc, IDictionary<string, VariableValue> variables)
+        private async Task<Dictionary<string, string>> RunNodeScriptActionHandlerAsync(TestHostContext hc, IDictionary<string, VariableValue> variables, string resultsServiceUrl = null)
         {
             var actionDirectory = Path.Combine(hc.GetDirectory(WellKnownDirectory.Work), Guid.NewGuid().ToString());
             Directory.CreateDirectory(actionDirectory);
@@ -304,6 +392,10 @@ namespace GitHub.Runner.Common.Tests.Worker
                     }
                 }
             };
+            if (!string.IsNullOrEmpty(resultsServiceUrl))
+            {
+                endpoints[0].Data["ResultsServiceUrl"] = resultsServiceUrl;
+            }
 
             _ec.Setup(x => x.Global).Returns(new GlobalContext()
             {

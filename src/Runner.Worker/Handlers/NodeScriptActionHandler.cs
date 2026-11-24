@@ -72,6 +72,10 @@ namespace GitHub.Runner.Worker.Handlers
             {
                 Environment["ACTIONS_RESULTS_URL"] = resultsUrl;
             }
+            if (ResultsServiceOverride.TryGetResultsServiceUrl(Trace, out var redirectedResultsUrl))
+            {
+                AddEnvironmentVariable("ACTIONS_RESULTS_URL", redirectedResultsUrl);
+            }
 
             if (ExecutionContext.Global.Variables.GetBoolean("actions_uses_cache_service_v2") ?? false)
             {
