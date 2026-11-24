@@ -6,6 +6,8 @@ fix: enable container operations on Windows runners
 fix: grant workflows permission to fork-sync job
 fix: lowercase Docker image name for GHCR compatibility
 fix: pin .github/workflows to the fork set during upstream sync
+fix: pin Microsoft.AspNetCore.WebUtilities to 8.0.34
+fix: pin gh repo targeting in fork-sync
 fix: quote script path in bash/sh handlers to support spaces (#4404)
 fix: revert build.yml Docker test to use upstream release
 fix: use fork's own releases for Docker image builds
